@@ -1,0 +1,22 @@
+# Node.js / React / Angular
+node_modules/
+dist/
+build/
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+
+# Docker
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# OS
+.DS_Store
+Thumbs.db
