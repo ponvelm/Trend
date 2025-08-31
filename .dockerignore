@@ -2,7 +2,6 @@
 .gitignore
 Dockerfile
 node_modules
-dist
 build
 .env
 *.md
