@@ -18,8 +18,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh """
-                echo "Building Docker image..."
-                docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG .
+               
+                docker build -t 743808052586.dkr.ecr.ap-south-1.amazonaws.com/trend-app:latest .
                 """
             }
         }
@@ -28,16 +28,17 @@ pipeline {
             steps {
                 sh """
                 echo "Logging into Amazon ECR..."
-                aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+                aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 743808052586.dkr.ecr.ap-south-1.amazonaws.com
                 """
             }
         }
 
-        stage('Push to ECR') {
+        stage('Push Docker Image to ECR') {
             steps {
                 sh """
-                echo "Pushing Docker image to ECR..."
-                docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG
+
+                aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 743808052586.dkr.ecr.ap-south-1.amazonaws.com
+                docker push 743808052586.dkr.ecr.ap-south-1.amazonaws.com/trend-app:latest
                 """
             }
         }
@@ -45,11 +46,10 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 sh """
-                echo "Updating EKS deployment..."
-                aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name Trend-cluster
+               
+                aws eks update-kubeconfig --region ap-south-1 --name Trend-cluster
                 kubectl apply -f deployment.yaml
                 kubectl apply -f service.yaml
-                kubectl rollout restart deployment trend-app-deployment
                 """
             }
         }
