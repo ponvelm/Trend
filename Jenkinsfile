@@ -75,8 +75,14 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 dir("${REPO_DIR}") {
-                    sh "kubectl apply -f deployment.yaml"
-                    sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${CONTAINER_NAME}=${IMAGE_URI}"
+                    withCredentials([usernamePassword(credentialsId: 'aws-creds', 
+                                                     usernameVariable: 'AWS_ACCESS_KEY_ID', 
+                                                     passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                        sh """
+                        kubectl apply -f deployment.yaml
+                        kubectl set image deployment/${DEPLOYMENT_NAME} ${CONTAINER_NAME}=${IMAGE_URI}
+                        """
+                    }
                 }
             }
         }
