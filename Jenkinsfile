@@ -10,6 +10,8 @@ pipeline {
         IMAGE_URI          = "${ECR_REGISTRY}/${ECR_REPO_NAME}:${IMAGE_TAG}"
         DEPLOYMENT_NAME    = 'trend-app-deployment' // Kubernetes deployment name
         CONTAINER_NAME     = 'trend-app'             // Container name inside deployment
+        REPO_DIR           = '.'                     // Current workspace
+        EKS_CLUSTER_NAME   = 'Trend-cluster-new'     // Your EKS cluster name
     }
 
     stages {
@@ -25,17 +27,19 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'aws-creds', 
                                                  usernameVariable: 'AWS_ACCESS_KEY_ID', 
                                                  passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''
+                    sh """
                     aws ecr describe-repositories --repository-names $ECR_REPO_NAME --region $AWS_DEFAULT_REGION \
                         || aws ecr create-repository --repository-name $ECR_REPO_NAME --region $AWS_DEFAULT_REGION
-                    '''
+                    """
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_URI} ."
+                dir("${REPO_DIR}") {
+                    sh "docker build -t ${IMAGE_URI} ."
+                }
             }
         }
 
@@ -55,10 +59,25 @@ pipeline {
             }
         }
 
+        stage('Configure kubeconfig') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'aws-creds', 
+                                                 usernameVariable: 'AWS_ACCESS_KEY_ID', 
+                                                 passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh """
+                    aws eks --region ${AWS_DEFAULT_REGION} update-kubeconfig --name ${EKS_CLUSTER_NAME}
+                    kubectl get nodes
+                    """
+                }
+            }
+        }
+
         stage('Deploy to EKS') {
             steps {
-                sh "kubectl apply -f deployment.yaml"
-                sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${CONTAINER_NAME}=${IMAGE_URI}"
+                dir("${REPO_DIR}") {
+                    sh "kubectl apply -f deployment.yaml"
+                    sh "kubectl set image deployment/${DEPLOYMENT_NAME} ${CONTAINER_NAME}=${IMAGE_URI}"
+                }
             }
         }
     }
