@@ -15,7 +15,8 @@ spec:
         app: trend-app
     spec:
       containers:
-        - name: trend-app
-          image: ponvel123/trend-app:latest
-          ports:
-            - containerPort: 3000
+      - name: trend-app
+        image: 743808052586.dkr.ecr.ap-south-1.amazonaws.com/trend-app:latest
+        ports:
+        - containerPort: 80   # FIXED ✅
+

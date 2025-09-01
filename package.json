@@ -1,11 +1,14 @@
 {
   "name": "trend-ci-cd-pipeline",
+  "name": "trend",
   "version": "1.0.0",
   "description": "Trend-Miniproject",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "start": "node index.js",
+  "build": "echo 'No build step defined yet'",
+  "test": "echo \"Error: no test specified\" && exit 1"
+  }, 
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ponvelm/Trend.git"
