@@ -29,10 +29,13 @@ pipeline {
 
         stage('Ensure ECR Repo Exists') {
             steps {
+               withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]){
                 sh '''
                   aws ecr describe-repositories --repository-names ${ECR_REPO_NAME} --region ${AWS_DEFAULT_REGION} \
                   || aws ecr create-repository --repository-name ${ECR_REPO_NAME} --region ${AWS_DEFAULT_REGION}
                 '''
+              }
+
             }
         }
 
