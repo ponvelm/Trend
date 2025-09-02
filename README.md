@@ -46,3 +46,266 @@ Trend-Miniproject Screenshots
 <img width="1478" height="764" alt="Trend-miniproject2-43  Git Clone reop" src="https://github.com/user-attachments/assets/cd1a9178-d637-463d-a51e-5821eedc24ed" />
 <img width="1919" height="976" alt="Trend-miniproject2-44  EC2 Instance VM and EKS-Cluster" src="https://github.com/user-attachments/assets/4efc2cc2-10e1-4b98-ac33-b0049d71c3aa" />
 
+🚀 Full Step-by-Step Deployment Guide
+1. Clone Application Repository
+git clone https://github.com/Vennilavan12/Trend.git
+cd Trend
+
+2. Run Locally (Verify App on Port 3000)
+npm install
+npm start
+
+
+✅ Visit: http://localhost:3000
+
+3. Dockerize the Application
+
+Inside project root, create Dockerfile:
+
+# Step 1: Build the React app
+FROM node:18-alpine as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Step 2: Serve the build using nginx
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 3000
+CMD ["nginx", "-g", "daemon off;"]
+
+Create .dockerignore
+node_modules
+npm-debug.log
+Dockerfile
+.git
+.gitignore
+
+Build & Run Docker
+docker build -t trend-app .
+docker run -d -p 3000:80 trend-app
+
+
+✅ Visit: http://localhost:3000
+
+4. Push Image to DockerHub
+
+Create a repo in DockerHub
+.
+
+Login and push:
+
+docker login
+docker tag trend-app your-dockerhub-username/trend-app:latest
+docker push your-dockerhub-username/trend-app:latest
+
+5. Terraform Infrastructure Setup
+
+Create a new folder infra/ → main.tf
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+}
+
+resource "aws_subnet" "subnet1" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
+}
+
+resource "aws_iam_role" "eks_role" {
+  name = "eksClusterRole"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "eks.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_eks_cluster" "eks" {
+  name     = "trend-cluster"
+  role_arn = aws_iam_role.eks_role.arn
+
+  vpc_config {
+    subnet_ids = [aws_subnet.subnet1.id]
+  }
+}
+
+resource "aws_instance" "jenkins" {
+  ami           = "ami-08c40ec9ead489470" # Ubuntu 22.04 LTS (update per region)
+  instance_type = "t2.medium"
+  key_name      = "your-keypair"
+  tags = {
+    Name = "JenkinsServer"
+  }
+}
+
+Run Terraform
+cd infra
+terraform init
+terraform plan
+terraform apply -auto-approve
+
+
+✅ This provisions VPC, Subnet, EC2 (Jenkins), IAM, and EKS cluster.
+
+6. Kubernetes Deployment
+
+Inside k8s/ create:
+
+deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trend-deployment
+  labels:
+    app: trend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: trend
+  template:
+    metadata:
+      labels:
+        app: trend
+    spec:
+      containers:
+        - name: trend
+          image: your-dockerhub-username/trend-app:latest
+          ports:
+            - containerPort: 80
+
+service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: trend-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: trend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+
+Deploy:
+
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+
+
+✅ Get LoadBalancer URL:
+
+kubectl get svc trend-service
+
+7. Jenkins Setup
+
+On EC2 Jenkins server:
+
+Install Jenkins, Docker & kubectl
+sudo apt update
+sudo apt install -y openjdk-11-jdk docker.io unzip
+sudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
+
+# Install kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+
+
+Install Jenkins Plugins:
+
+Docker Pipeline
+
+GitHub
+
+Kubernetes
+
+Pipeline
+
+8. Jenkins Pipeline (Declarative)
+
+Create Jenkinsfile in project root:
+
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
+        DOCKER_IMAGE = "your-dockerhub-username/trend-app:latest"
+        KUBECONFIG_CREDENTIALS = credentials('eks-kubeconfig')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Vennilavan12/Trend.git'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $DOCKER_IMAGE .'
+            }
+        }
+        stage('Push to DockerHub') {
+            steps {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                sh 'docker push $DOCKER_IMAGE'
+            }
+        }
+        stage('Deploy to EKS') {
+            steps {
+                writeFile file: 'kubeconfig', text: "$KUBECONFIG_CREDENTIALS"
+                sh 'export KUBECONFIG=$WORKSPACE/kubeconfig && kubectl apply -f k8s/'
+            }
+        }
+    }
+}
+
+
+✅ Configure:
+
+Jenkins credentials → dockerhub-creds
+
+Jenkins credentials → eks-kubeconfig (from AWS CLI aws eks update-kubeconfig).
+
+9. Monitoring Setup
+Option A: Prometheus + Grafana
+
+Deploy Prometheus & Grafana in EKS:
+
+kubectl create namespace monitoring
+kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
+
+
+Install Grafana Helm chart and expose via LoadBalancer.
+
+Option B: AWS CloudWatch
+
+Enable EKS CloudWatch container insights.
+
+10. Version Control (GitHub)
+echo "node_modules/" > .gitignore
+echo "Dockerfile" > .dockerignore
+
+git init
+git remote add origin https://github.com/your-username/trend-deployment.git
+git add .
+git commit -m "Initial CI/CD setup"
+git push origin main
+
+ARN URL link: a0103bf4705c74a34a85c0d94730db44-271939350.ap-south-1.elb.amazonaws.com
