@@ -44,3 +44,5 @@ Trend-Miniproject Screenshots
 <img width="1915" height="967" alt="Trend-miniproject2-41  DockerHub dasboard page" src="https://github.com/user-attachments/assets/0a3a1a81-0ae8-40bb-a127-51d806979fdf" />
 <img width="1476" height="755" alt="Trend-miniproject2-42  Docker push" src="https://github.com/user-attachments/assets/3b76ad37-4026-4384-9934-96010308c217" />
 <img width="1478" height="764" alt="Trend-miniproject2-43  Git Clone reop" src="https://github.com/user-attachments/assets/cd1a9178-d637-463d-a51e-5821eedc24ed" />
+<img width="1919" height="976" alt="Trend-miniproject2-44  EC2 Instance VM and EKS-Cluster" src="https://github.com/user-attachments/assets/4efc2cc2-10e1-4b98-ac33-b0049d71c3aa" />
+
